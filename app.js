@@ -36,6 +36,7 @@ function appendMenuItem(level, id, title){
         console.error("[loc] 没有找到 article 元素");
         return;
     }
+
     // 获取所有标题，包含一级标题到六级标题
     let titles = $('article').find('h1,h2,h3,h4,h5,h6');
     // 如果没有标题，直接返回
