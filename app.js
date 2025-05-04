@@ -16,7 +16,7 @@
 const STYLE_CONFIG = {
     // 目录样式
     menu: {
-        width: '230px',
+        width: '250px',
         background: '#f9f9f9',
         zIndex: 99999,
         borderRadius: '8px',
@@ -288,8 +288,12 @@ GM_addStyle(`
     'use strict';
     try {
         console.log("[loc] ⏳ 开始生成目录...");
-        TOCGenerator.init();
-        console.log('[TOC] 🎉 目录生成完成，请尽情享受吧！');
+        if (typeof TOCGenerator?.init === 'function') {
+            TOCGenerator.init();
+            console.log('[TOC] 🎉 目录生成完成，请尽情享受吧！');
+        } else {
+            console.error('[TOC] ❌ 核心模块未正确加载');
+        }
     } catch (error) {
         console.error('[TOC] 💥 初始化失败:', error);
     }
