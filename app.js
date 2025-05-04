@@ -1,7 +1,7 @@
 // =============================== 脚本头部元信息 ===============================
 // ==UserScript==
 // @name         简书智能目录生成器
-// @namespace    http://tampermonkey.net/
+// @namespace    https://github.com/ricsy/JianShuToc
 // @version      1.0.0
 // @description  自动生成响应式目录，支持夜间模式适配
 // @author       ricsy
@@ -259,8 +259,15 @@ GM_addStyle(`
             background: #2d2d2d !important;
             color: #e0e0e0;
         }
+        #side-menu-loc h2 {
+            color: #e0e0e0 !important;
+        }
+        #menu_loc_ol li.active {
+            background: #88969f;
+        }
         #menu_loc_ol li:hover {
-            background: #3d3d3d;
+            background: #a4c99e;
+            color: #000000;
         }
     }
 `);
