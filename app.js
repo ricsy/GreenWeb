@@ -5,8 +5,10 @@
 // @license      MIT
 // @description  自动生成响应式目录，支持清除广告、不相关内容，适配夜间模式
 // @author       ricsy
-// @match        *://www.jianshu.com/p/*
 // @match        *://blog.csdn.net/*/article/details/*
+// @match        *://zhuanlan.zhihu.com/p/*
+// @match        *://www.jianshu.com/p/*
+// @match        *://www.baidu.com/*
 // @icon         none
 // @require      https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js
 // @grant        GM_addStyle
@@ -20,6 +22,14 @@ window.addEventListener('error', (e) => {
 /* =============================== 元素标签 =============================== */
 const elementTag = (() => {
     const CONFIG = {
+        'blog.csdn.net': {
+            'article': {
+                name_zh: '文章标签',
+                hide: false,
+            },
+        },
+        'zhuanlan.zhihu.com': {
+        },
         'www.jianshu.com': {
             'article': {
                 name_zh: '文章标签',
@@ -30,12 +40,8 @@ const elementTag = (() => {
                 hide: true,
             },
         },
-        'blog.csdn.net': {
-            'article': {
-                name_zh: '文章标签',
-                hide: false,
-            },
-        }
+        'www.baidu.com': {
+        },
     };
     return {
         // 根据中文名称查询
@@ -59,34 +65,6 @@ const elementTag = (() => {
 /* =============================== 页面元素 =============================== */
 const webElement = (() => {
     const CONFIG = {
-        'www.jianshu.com': {
-            '.aside': {
-                name_zh: '右侧广告栏',
-                selector_type: 'class',
-                name_en: 'aside',
-                type: 'official',
-                dynamic: true,
-                hide: true,
-            },
-            '#side-menu-toc': {
-                name_zh: '目录主容器',
-                selector_type: 'id',
-                name_en: 'side-menu-toc',
-                type: 'custom'
-            },
-            '#menu_toc_ol': {
-                name_zh: '目录列表',
-                selector_type: 'id',
-                name_en:'menu_toc_ol',
-                type: 'custom'
-            },
-            '#ad-control': {
-                name_zh: '广告控制栏',
-                selector_type: 'id',
-                name_en:'ad-control',
-                type: 'custom'
-            },
-        },
         'blog.csdn.net': {
             '.toolbar-container': {
                 name_zh: '顶部工具栏',
@@ -207,7 +185,163 @@ const webElement = (() => {
                 type: 'official',
                 hide: true,
             }
-        }
+        },
+        'zhuanlan.zhihu.com': {
+            '.ColumnPageHeader-Wrapper': {
+                name_zh: '顶部信息栏',
+                selector_type: 'class',
+                name_en:'ColumnPageHeader-Wrapper',
+                type: 'official',
+                hide: true,
+            },
+            '.Modal-wrapper.signFlowModal': {
+                name_zh: '登录弹窗',
+                selector_type: 'class',
+                name_en: 'signFlowModal',
+                type: 'official',
+                hide: true,
+                dynamic: true
+            },
+            '.signFlowModal-container': {
+                name_zh: '登录弹窗容器',
+                selector_type: 'class',
+                name_en:'signFlowModal-container',
+                type: 'official',
+                hide: true,
+                dynamic: true
+            },
+            '.Post-Row-Content-right': {
+                name_zh: '右侧信息栏',
+                selector_type: 'class',
+                name_en: 'Post-Row-Content-right',
+                type: 'official',
+                hide: true,
+            },
+            '.Post-Sub.Post-NormalSub': {
+                name_zh: '推荐阅读',
+                selector_type: 'class',
+                name_en: 'Post-Sub.Post-NormalSub',
+                type: 'official',
+                hide: true,
+            },
+            '.Post-Main': {
+                name_zh: '文章主容器',
+                selector_type: 'class',
+                name_en: 'Post-Main',
+                type: 'official',
+                hide: false,
+                change: true,
+                change_info: {
+                    "display": "block",
+                    "width": "800px",
+                }
+            },
+        },
+        'www.jianshu.com': {
+            '.aside': {
+                name_zh: '右侧广告栏',
+                selector_type: 'class',
+                name_en: 'aside',
+                type: 'official',
+                dynamic: true,
+                hide: true,
+            },
+            '#side-menu-toc': {
+                name_zh: '目录主容器',
+                selector_type: 'id',
+                name_en: 'side-menu-toc',
+                type: 'custom'
+            },
+            '#menu_toc_ol': {
+                name_zh: '目录列表',
+                selector_type: 'id',
+                name_en:'menu_toc_ol',
+                type: 'custom'
+            },
+            '#ad-control': {
+                name_zh: '广告控制栏',
+                selector_type: 'id',
+                name_en:'ad-control',
+                type: 'custom'
+            },
+        },
+        'www.baidu.com': {
+            '#u': {
+                name_zh: '用户中心',
+                selector_type: 'id',
+                name_en:'u',
+                type: 'official',
+                hide: true,
+            },
+            '#s_tab_inner': {
+                name_zh: '搜索分类',
+                selector_type: 'id',
+                name_en:'s_tab_inner',
+                type: 'official',
+                hide: true,
+            },
+            'div[id^="content_left"] div:has(span:contains(广告))': {
+                name_zh: '内容区广告',
+                selector_type: 'attribute',
+                name_en:'content_ads',
+                type: 'official',
+                hide: true,
+            },
+            'div[data-creative-id], div[data-ad-info]': {
+                name_zh: '智能推荐广告',
+                selector_type: 'attribute',
+                name_en:'smart_ads',
+                type: 'official',
+                hide: true,
+            },
+            'div:has(> .c-border[data-click])': {
+                name_zh: '交互式广告',
+                selector_type: 'attribute',
+                name_en:'interactive_ads',
+                type: 'official',
+                hide: true,
+            },
+            '#con-ar': {
+                name_zh: '右侧信息栏',
+                selector_type: 'id',
+                name_en:'con-ar',
+                type: 'official',
+                hide: true,
+            },
+            '.se_common_hint': {
+                name_zh: '加入保障',
+                selector_type: 'class',
+                name_en:'se_common_hint',
+                type: 'official',
+                hide: true,
+            },
+            '#con-right-bottom': {
+                name_zh: '推广咨询',
+                selector_type: 'id',
+                name_en:'con-right-bottom',
+                type: 'official',
+                hide: true,
+            },
+            '#rs_new': {
+                name_zh: '相关搜索',
+                selector_type: 'id',
+                name_en:'rs_new',
+                type: 'official',
+                hide: true,
+            },
+            '.new-pmd.c-container': {
+                name_zh: '内容容器',
+                selector_type: 'class',
+                name_en:'new-pmd.c-container',
+                type: 'official',
+                hide: false,
+                change: true,
+                change_info: {
+                    "display": "block",
+                    "width": "800px",
+                }
+            },
+        },
     };
     return {
         // 返回所有选择器
@@ -220,7 +354,9 @@ const webElement = (() => {
                 selector: selector,
                 hide: config?.hide || false,
                 type: config?.type || 'official',
-                dynamic: config?.dynamic || false
+                dynamic: config?.dynamic || false,
+                change: config?.change || false,
+                change_info: config?.change_info || {},
             })) : [];
         },
         // 根据中文名称查询，如果中文名称为空则返回所有选择器
@@ -239,12 +375,14 @@ const webElement = (() => {
                         selector: selector,
                         hide: config?.hide || false,
                         type: config?.type || 'official',
-                        dynamic: config?.dynamic || false
+                        dynamic: config?.dynamic || false,
+                        change: config?.change || false,
+                        change_info: config?.change_info || {},
                     }];
                 }
             }
             return [];
-        }
+        },
     };
 })();
 
@@ -255,10 +393,16 @@ const EelementConfig = (() => {
             rightOffset: 850,
             topOffset: 110,
         },
+        'zhuanlan.zhihu.com': {
+            rightOffset: 800,
+            topOffset: 100,
+        },
         'www.jianshu.com': {
             rightOffset: 800,
             topOffset: 100,
-        }
+        },
+        'www.baidu.com': {
+        },
     };
 
     return {
@@ -268,7 +412,7 @@ const EelementConfig = (() => {
             const [platformKey] = Object.keys(CONFIG)
                 .filter(k => hostname.includes(k));
             return CONFIG[platformKey] || {};
-        }
+        },
     };
 })();
 
@@ -377,6 +521,24 @@ const Utils = (() => {
                 return false;
             }
             return true;
+        },
+        // 动态元素监听器
+        setupDynamicHandler: (selector, callback, delay = 300) => {
+            const observer = new MutationObserver(Utils.debounce((mutations) => {
+                mutations.forEach(mutation => {
+                    if (mutation.addedNodes) {
+                        $(mutation.addedNodes).find(selector).each((i, el) => callback(el));
+                        if ($(selector, document.body).length) callback($(selector)[0]);
+                    }
+                });
+            }, delay));
+            
+            observer.observe(document.body, {
+                childList: true,
+                subtree: true,
+                attributes: false,
+                characterData: false
+            });
         }
     };
 })();
@@ -626,7 +788,7 @@ const TOCGenerator = (() => {
             if (!initStructure()) return;
             generateItems();
             bindClickEvents();
-        }
+        },
     };
 })();
 
@@ -890,8 +1052,64 @@ const removeAds = () => {
                 }
             });;
 
+    } else if (window.location.hostname === 'zhuanlan.zhihu.com') {
+         // =============================== 【知乎】批量移除元素 ===============================
+         const elements = webElement.getAllSelectors() ?? [];
+         elements.forEach(element => {
+             if (element.hide) {
+                 $(element.selector).hide();
+             }
+         });
+
+        // =============================== 【知乎】监控登录弹窗 ===============================
+        Utils.setupDynamicHandler('.signFlowModal-container', () => {
+            $('.Modal-closeButton').click();
+            $('body.PostIndex-body div:has(button[class*="Button--primary"]:contains(立即登录/注册))').hide();
+        });
+
+        Utils.setupDynamicHandler('.body.PostIndex-body', () => {
+            $('body.PostIndex-body div:has(button[class*="Button--primary"]:contains(立即登录/注册))').hide();
+        });
+
+        // =============================== 【知乎】监控点击链接 ===============================
+        document.addEventListener('click', (e) => {
+            const link = e.target.closest('a');
+            if (link?.href?.includes('link.zhihu.com')) {
+              const decodedUrl = decodeURIComponent(link.href.split('target=')[1]);
+              link.href = decodedUrl;
+            }
+          });
+        
+    } else if (window.location.hostname === 'www.baidu.com') {
+         // =============================== 【百度】批量移除元素 ===============================
+         const elements = webElement.getAllSelectors() ?? [];
+         elements.forEach(element => {
+             if (element.hide) {
+                 $(element.selector).hide();
+             }
+         });
     };
 };
+
+const makeBeatiful = () => {
+    const elements = webElement.getAllSelectors() ?? [];``
+    elements.forEach(element => {
+        if (element.change) {
+            Object.entries(element.change_info).forEach(change => {
+                console.log(element.selector, change[0], change[1]);
+                $(element.selector).css(change[0], `${change[1]}!important`);
+            })
+        }
+    });
+    if (window.location.hostname === 'blog.csdn.net') {
+        
+    } else if (window.location.hostname === 'zhuanlan.zhihu.com') {
+        
+    } else if (window.location.hostname === 'www.jianshu.com') {
+        
+    } else if (window.location.hostname === 'www.baidu.com') {
+    }
+}
 
 /* =============================== 样式管理模块 =============================== */
 GM_addStyle(`
@@ -993,6 +1211,16 @@ GM_addStyle(`
             }
         } catch (e) {
             console.error('[GreenWeb] [ADB] 💥 广告控制模块异常 - ', e);
+        }
+    })();
+
+    /* =============================== 样式美化 =============================== */
+    (() => {
+        try {
+            makeBeatiful();
+    console.log('[GreenWeb] [MBF] ✅ 页面已美化');
+        } catch (e) {
+            console.error('[GreenWeb] [MBF] 💥 页面美化模块异常 - ', e);
         }
     })();
 
