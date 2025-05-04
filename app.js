@@ -3,7 +3,7 @@
 // @name         简书智能目录生成器
 // @namespace    https://github.com/ricsy/JianShuToc
 // @version      1.0.0
-// @description  自动生成响应式目录，支持夜间模式适配
+// @description  自动生成响应式目录，支持清除非正文内容，适配夜间模式
 // @author       ricsy
 // @match        http://www.jianshu.com/p/*
 // @match        https://www.jianshu.com/p/*
@@ -221,6 +221,11 @@ const TOCGenerator = (() => {
         }
         const AsideSelector = '.' + AsideClassName.split(' ').join('.')
         $(AsideSelector).css('display','none');
+
+        // 获取文章容器 article 的父级元素
+        const $articleParent = $('article').parent();
+        // 隐藏 article 父级元素的所有同级节点
+        $articleParent.siblings().hide();
     };
 
     return {
