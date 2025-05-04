@@ -1,5 +1,5 @@
-// ==UserScript==
 // =============================== 脚本头部元信息 ===============================
+// ==UserScript==
 // @name         简书智能目录生成器
 // @namespace    http://tampermonkey.net/
 // @version      1.0.0
@@ -12,7 +12,7 @@
 // @grant        GM_addStyle
 // ==/UserScript==
 
-/* 样式配置常量 */
+/* =============================== 样式配置常量 =============================== */
 const STYLE_CONFIG = {
     // 目录样式
     menu: {
@@ -34,148 +34,207 @@ const STYLE_CONFIG = {
     }
 };
 
-// 标题起始索引
-var titleIndex = 1;
-
-// 在侧边栏中添加目录项
-function appendMenuItem(level, id, title){
-        let paddingLeft = (level - 1) * 20;
-        // 一级标题增加左边距，美化悬浮显示效果
-        if (level == 1) {
-            paddingLeft = 10;
-        }
-        $('#menu_loc_ol').append(`
-            <li
-                class="${id}"
-                style="padding-left: ${paddingLeft}px;"
-            >
-                ${title}
-            </li>
-        `);
-    }
-
-(function() {
-    'use strict';
-    console.log("[loc] ⏳ 开始生成目录...");
-    // 如果没有文章，直接返回
-    if ($('article').length == 0) {
-        console.error("[loc] 没有找到 article 元素");
-        return;
-    }
-
+/* =============================== 核心功能模块 =============================== */
+const TOCGenerator = (() => {
+    // 标题起始索引
+    let titleIndex = 1;
+    // 目录标题
+    const LocTitle =  "📖 内容导航";
     // 获取所有标题，包含一级标题到六级标题
-    let titles = $('article').find('h1,h2,h3,h4,h5,h6');
-    // 如果没有标题，直接返回
-    if (titles.length == 0) {
-        return;
-    }
+    const $titles = $('article').find('h1,h2,h3,h4,h5,h6');
+    if (!$titles.length) return;
 
-    // =============================== 插入目录元素 ===============================
-    // 获取文章的类名
-    const ArticleClassName = $('article').attr('class');
-    // 将类名转为有效选择器
-    if (!ArticleClassName) {
-        console.error("[loc] 没有找到 article 元素的 class 属性");
-        return;
-    }
-    const articleSelector = '.' + ArticleClassName.split(' ').join('.')
-    // 开始插入使用反引号（`）定义多行字符串，避免单行过长
-    $(articleSelector).prepend(`
-        <div
-            id="side-menu-loc"
-            style="
-                position:fixed;                                     /* 固定定位 */
-                top:100px;                                          /* 距离顶部的距离 */
-                right:100px;                                        /* 距离右侧的距离 */
-                width:${STYLE_CONFIG.menu.width};                   /* 宽度 */
-                background:${STYLE_CONFIG.menu.background};         /* 背景颜色 */
-                z-index:${STYLE_CONFIG.menu.zIndex};                /* 确保在其他元素之上 */
-                border-radius:${STYLE_CONFIG.menu.borderRadius};    /* 圆角 */
-                border-left: 1px solid #ccc;                        /* 左边框 */
-                box-shadow:${STYLE_CONFIG.menu.boxShadow};          /* 阴影 */
-                padding:15px 20px;                                  /* 内边距 */
-                line-height: 1.3;                                   /* 行高 */
-            "
-        >
-            <h2
-                style="margin:0 0 8px;font-size:18px;">
-                📖 内容导航
-            </h2>
-            <hr
+    /* =============================== 工具函数 =============================== */
+     // 防抖函数
+    const debounce = (func, delay) => {
+        let timer;
+        return (...args) => {
+            clearTimeout(timer);
+            timer = setTimeout(() => func.apply(this, args), delay);
+        };
+    };
+
+    /* =============================== 事件监听 =============================== */
+    // 加载/调整大小/滚动时触发（严格模式）
+    const optimizedScrollHandler = debounce(() => bindScrollEvents(true), 100);
+    window.addEventListener('load', optimizedScrollHandler);
+    window.addEventListener('resize', optimizedScrollHandler);
+    window.addEventListener('scroll', optimizedScrollHandler);
+
+    /* =============================== 初始化目录结构 =============================== */
+    const initStructure = () => {
+        // 文章容器
+        const $article = $('article');
+        if (!$article.length) {
+            console.error('[TOC] 未找到文章容器 article');
+            return false;
+        }
+
+        // 插入目录
+        $article.prepend(`
+            <div id="side-menu-loc"
                 style="
-                    height:${STYLE_CONFIG.hr.height};                /* 线条粗细 */
-                    background:${STYLE_CONFIG.hr.color};             /* 背景颜色 */
-                    margin:12px 0;                                   /* 上下边距 */
-                    border:none;                                     /* 移除默认边框 */
-                "
-            >
-        </div>
-    `);
-    // 插入 ol 元素，不包含 ol 结束标签
-    $('#side-menu-loc').append(`
-        <ol
-            id="menu_loc_ol"
-            style="
-                list-style: none; // 移除默认的点样式
-                margin: 0px;      // 移除默认的外边距
-                padding: 0px;     // 移除默认的内边距
-            "
-        >
-    `);
+                    position:fixed;                                     /* 固定定位 */
+                    top:100px;                                          /* 距离顶部的距离 */
+                    right:100px;                                        /* 距离右侧的距离 */
+                    width:${STYLE_CONFIG.menu.width};                   /* 宽度 */
+                    background:${STYLE_CONFIG.menu.background};         /* 背景颜色 */
+                    z-index:${STYLE_CONFIG.menu.zIndex};                /* 确保在其他元素之上 */
+                    border-radius:${STYLE_CONFIG.menu.borderRadius};    /* 圆角 */
+                    border-left: 1px solid #ccc;                        /* 左边框 */
+                    box-shadow:${STYLE_CONFIG.menu.boxShadow};          /* 阴影 */
+                    padding:15px 20px;                                  /* 内边距 */
+                    line-height: 1.3;                                   /* 行高 */
+                ">
+                <h2
+                    style="margin:0 0 8px;font-size:18px;">
+                    ${LocTitle}
+                </h2>
+                <hr
+                style="
+                    height:${STYLE_CONFIG.hr.height};                   /* 线条粗细 */
+                    background:${STYLE_CONFIG.hr.color};                /* 背景颜色 */
+                    margin:12px 0;                                      /* 上下边距 */
+                    border:none;                                        /* 移除默认边框 */
+                ">
+                <ol id="menu_loc_ol" style="list-style:none; margin:0; padding:0;"></ol>
+            </div>
+        `);
+        return true;
+    };
 
-    // =============================== 生成目录内容 ===============================
-    // 开始生成
-    titles.each(function() {
-        // 获取标题的层级
-        let level = parseInt(this.tagName.substring(1));
-        let title = $(this).text();
-        // id 全部重新生成, 避免重复
-        let titleId = "id_" + titleIndex++;
-        $(this).attr('id', titleId);
-        appendMenuItem(level, titleId, title);
-    })
-    // 添加 ol 结束标签
-    $('#side-menu-loc').append('</ol>');
+    /* =============================== 生成目录项 =============================== */
+    const generateItems = () => {
+        // 创建文档片段（内存中的临时容器）
+        const fragment = document.createDocumentFragment();
+        $titles.each(function() {
+            // 标题级别
+            const level = parseInt(this.tagName.substring(1));
+            // 标题内容
+            let title = $(this).text();
+            // 标题ID
+            const titleId = `toc_${titleIndex++}`;
+            // 为标题添加ID
+            $(this).attr('id', titleId);
 
-    // =============================== 绑定点击事件 ===============================
-    // 绑定目录 li 点击事件,实现点击跳转到对应位置
-    $('#menu_loc_ol li').on('click',function(){
-        // 获取目标元素
-        let targetId = $(this).attr('class');
-        const targetElement = $("#"+targetId)[0];
+            let paddingLeft = (level - 1) * 20;
+            // 一级标题增加左边距，美化悬浮显示效果
+            if (level == 1) {
+                paddingLeft = 10;
+            }
 
-        // =============================== 处理页面滚动 ===============================
-        // 计算滚动位置
-        const elementHeight = targetElement.offsetHeight + 10;
-        const y = targetElement.getBoundingClientRect().top + window.pageYOffset - elementHeight;
+            // 生成目录项
+            const $li = $(`
+                <li class="${titleId}"
+                    style="
+                        padding-left: ${paddingLeft}px;
+                        margin:6px 0;
+                        transition:all 0.2s;
+                        cursor:pointer;
+                    ">
+                    ${title}
+                </li>
+            `);
 
-        // 滚动到目标位置
-        window.scrollTo({
-            top: y,
-            behavior: 'smooth'
+            if (!title.includes(LocTitle)) {
+                // 将原生 DOM 元素添加到片段
+                fragment.appendChild($li[0]);
+            }
         });
 
-        // =============================== 处理点击状态 ===============================
-        // 清除所有元素点击状态
-        $('#menu_loc_ol li').removeClass('active');
-        // 设置当前元素点击状态
-        $(this).addClass('active');
-    });
+        // 一次性添加所有目录项到文档片段，避免频繁操作DOM
+        $('#menu_loc_ol').append(fragment);
+    };
 
-    console.log("[loc] 🎉 生成成功，请尽情享受吧！");
+    /* =============================== 绑定点击事件 =============================== */
+    const bindClickEvents = () => {
+        $('#menu_loc_ol').on('click', 'li', function() {
+            // 获取目标元素
+            const targetId = $(this).attr('class');
+            const targetElement = $(`#${targetId}`)[0];
 
-    // =============================== 删除右侧广告 ===============================
-    const AsideClassName = $('aside').attr('class');
-    if (!AsideClassName) {
-        console.error("[loc] 没有找到 aside 元素的 class 属性");
-        return;
-    }
-    const AsideSelector = '.' + AsideClassName.split(' ').join('.')
-    $(AsideSelector).css('display','none');
-})()
+            // =============================== 处理页面滚动 ===============================
+            // 多次点击同一目录项时，不做处理
+            if (!targetElement) {
+                return ;
+            }
+            // 计算滚动位置
+            const elementHeight = targetElement.offsetHeight;
+            const y = targetElement.getBoundingClientRect().top + window.pageYOffset - elementHeight - 10;
+
+            // 滚动到目标位置
+            window.scrollTo({
+                top: y,
+                behavior: 'smooth'
+            });
+
+             // =============================== 处理点击状态 ===============================
+            // 清除所有元素点击状态
+            $('#menu_loc_ol li').removeClass('active');
+            // 设置当前元素点击状态
+            $(this).addClass('active');
+        });
+    };
+
+    /* =============================== 绑定滚动事件 =============================== */
+    const bindScrollEvents = (strictMode) => {
+        let currentId = '';
+        let minVisibleTop = Infinity;
+        let maxInvisibleTop = -Infinity;
+        let hiddenId = '';
+
+        Array.from($titles).forEach(title => {
+            const rect = title.getBoundingClientRect();
+            const id = title.getAttribute('id');
+
+            // 严格模式判断逻辑
+            const isVisible = strictMode ?
+                rect.top >= 10 && rect.bottom <= window.innerHeight :
+                rect.top >= -rect.height;
+
+            if (isVisible && rect.top < minVisibleTop) {
+                minVisibleTop = rect.top;
+                currentId = id;
+            } else if (rect.top < 0 && rect.top > maxInvisibleTop) {
+                maxInvisibleTop = rect.top;
+                hiddenId = id;
+            }
+        });
+
+        currentId = currentId || hiddenId;
+
+        const tocLinks = document.querySelectorAll('#menu_loc_ol li');
+        // 更新激活状态
+        tocLinks.forEach(link => {
+            const classList = link.className || '';
+            const firstClass = classList.split(/\s+/)[0] || '';
+            link.classList.toggle('active', firstClass === currentId);
+        });
+    };
+
+    /* =============================== 广告移除模块 =============================== */
+    const removeAds = () => {
+        const AsideClassName = $('aside').attr('class');
+        if (!AsideClassName) {
+            console.error("[loc] 没有找到广告容器 aside 的 class 属性");
+            return false;
+        }
+        const AsideSelector = '.' + AsideClassName.split(' ').join('.')
+        $(AsideSelector).css('display','none');
+    };
+
+    return {
+        init: () => {
+            if (!initStructure()) return;
+            generateItems();
+            bindClickEvents();
+            removeAds();
+        }
+    };
+})();
 
 
-/* 样式管理模块 */
+/* =============================== 样式管理模块 =============================== */
 GM_addStyle(`
     #menu_loc_ol li {
         font-size: ${STYLE_CONFIG.listItem.fontSize};           /* 字体大小 */
@@ -205,3 +264,15 @@ GM_addStyle(`
         }
     }
 `);
+
+/* =============================== 主执行流程 =============================== */
+(() => {
+    'use strict';
+    try {
+        console.log("[loc] ⏳ 开始生成目录...");
+        TOCGenerator.init();
+        console.log('[TOC] 🎉 目录生成完成，请尽情享受吧！');
+    } catch (error) {
+        console.error('[TOC] 💥 初始化失败:', error);
+    }
+})();
