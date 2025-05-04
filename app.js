@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         🌿📖 这才是简书
 // @namespace    https://github.com/ricsy/JianShuToc
-// @version      1.0.0
+// @version      1.0.1
 // @license      MIT
 // @description  自动生成响应式目录，支持清除广告、不相关内容，适配夜间模式
 // @author       ricsy
@@ -16,7 +16,8 @@
 const STYLE_CONFIG = {
     // 目录样式
     menu: {
-        width: '250px',
+        width: 'clamp(250px, 25vw, 300px)',     /* 响应式宽度 */
+        right: 'max(20px, calc(50% - 800px))',  /* 动态右侧间距 */
         background: '#f9f9f9',
         zIndex: 99999,
         borderRadius: '8px',
@@ -34,16 +35,12 @@ const STYLE_CONFIG = {
     }
 };
 
+/* =============================== 配置常量 =============================== */
+// 文章标题是否存在，默认为 true（存在）
+var isTitleExist = true;
+
 /* =============================== 核心功能模块 =============================== */
 const TOCGenerator = (() => {
-    // 标题起始索引
-    let titleIndex = 1;
-    // 目录标题
-    const LocTitle =  "📖 内容导航";
-    // 获取所有标题，包含一级标题到六级标题
-    const $titles = $('article').find('h1,h2,h3,h4,h5,h6');
-    if (!$titles.length) return;
-
     /* =============================== 工具函数 =============================== */
      // 防抖函数
     const debounce = (func, delay) => {
@@ -54,12 +51,59 @@ const TOCGenerator = (() => {
         };
     };
 
+    // 获取排序后的唯一标题层级
+    function getSortedUniqueLevels(titles) {
+        const levelSet = new Set();
+
+        titles.each(function() {
+            const level = parseInt(this.tagName.substring(1));
+            levelSet.add(level);
+        });
+
+        // 将 Set 转为数组并按 h1-h6 顺序排序
+        return Array.from(levelSet).sort((a, b) => a - b);
+    }
+
+    /* =============================== 广告移除模块 =============================== */
+    const removeAds = () => {
+        const AsideClassName = $('aside').attr('class');
+        if (!AsideClassName) {
+            console.error("[loc] 没有找到广告容器 aside 的 class 属性");
+            return false;
+        }
+        const AsideSelector = '.' + AsideClassName.split(' ').join('.')
+        $(AsideSelector).css('display','none');
+
+        // 获取文章容器 article 的父级元素
+        const $articleParent = $('article').parent();
+        // 隐藏 article 父级元素的所有同级节点
+        $articleParent.siblings().hide();
+    };
+
+    // 优先移除广告
+    removeAds();
+
+    // 标题起始索引
+    let titleIndex = 1;
+    // 目录标题
+    const LocTitle =  "📖 内容导航";
+    // 获取所有标题，包含一级标题到六级标题
+    const $titles = $('article').find('h1,h2,h3,h4,h5,h6');
+    if (!$titles.length) {
+        isTitleExist = false;
+        return false;
+    }
+
     /* =============================== 事件监听 =============================== */
     // 加载/调整大小/滚动时触发（严格模式）
     const optimizedScrollHandler = debounce(() => bindScrollEvents(true), 100);
     window.addEventListener('load', optimizedScrollHandler);
     window.addEventListener('resize', optimizedScrollHandler);
     window.addEventListener('scroll', optimizedScrollHandler);
+
+    // 滚动时触发，用于同步菜单滚动位置
+    const optimizedSyncMenuScroll = debounce(() => syncMenuScroll(true), 100);
+    window.addEventListener('scroll', optimizedSyncMenuScroll);
 
     /* =============================== 初始化目录结构 =============================== */
     const initStructure = () => {
@@ -76,15 +120,19 @@ const TOCGenerator = (() => {
                 style="
                     position: fixed;                                     /* 固定定位 */
                     top: 100px;                                          /* 距离顶部的距离 */
-                    right: calc(50% - 750px);                                      /* 距离右侧的距离 */
+                    right: ${STYLE_CONFIG.menu.right};                   /* 距离右侧的距离 */
                     width: ${STYLE_CONFIG.menu.width};                   /* 宽度 */
                     background: ${STYLE_CONFIG.menu.background};         /* 背景颜色 */
                     z-index: ${STYLE_CONFIG.menu.zIndex};                /* 确保在其他元素之上 */
                     border-radius: ${STYLE_CONFIG.menu.borderRadius};    /* 圆角 */
                     border-left: 1px solid #ccc;                         /* 左边框 */
+                    box-sizing: border-box;                              /* 包含边框和内边距 */
                     box-shadow: ${STYLE_CONFIG.menu.boxShadow};          /* 阴影 */
                     padding:15px 20px;                                   /* 内边距 */
                     line-height: 1.3;                                    /* 行高 */
+                    max-width: calc(100vw - 1000px);                     /* 防溢出保护 */
+                    max-height: 70vh;                                    /* 最大高度 */
+                    overflow-y: auto;                                    /* 溢出时显示滚动条 */
                 ">
                 <h2
                     style="margin:0 0 8px;font-size:18px;">
@@ -107,6 +155,7 @@ const TOCGenerator = (() => {
     const generateItems = () => {
         // 创建文档片段（内存中的临时容器）
         const fragment = document.createDocumentFragment();
+        const duplicateTitlesLevel = getSortedUniqueLevels($titles);
         $titles.each(function() {
             // 标题级别
             const level = parseInt(this.tagName.substring(1));
@@ -116,11 +165,17 @@ const TOCGenerator = (() => {
             const titleId = `toc_${titleIndex++}`;
             // 为标题添加ID
             $(this).attr('id', titleId);
+            // 当前标题在去重后的层级中的索引
+            index = duplicateTitlesLevel.indexOf(level);
 
-            let paddingLeft = (level - 1) * 20;
-            // 一级标题增加左边距，美化悬浮显示效果
-            if (level == 1) {
+            let paddingLeft = 0;
+            // 增加默认左边距，美化悬浮显示效果
+            // 所有标题层级相同，或标题层级与去重按顺序排序后的第一个层级相同时满足条件
+            if (duplicateTitlesLevel.length == 1 || index == 0) {
                 paddingLeft = 10;
+            } else {
+                // 标题层级与去重按顺序排序后的最后一个层级相同时满足条件
+                paddingLeft = index * 20;
             }
 
             // 生成目录项
@@ -212,28 +267,36 @@ const TOCGenerator = (() => {
         });
     };
 
-    /* =============================== 广告移除模块 =============================== */
-    const removeAds = () => {
-        const AsideClassName = $('aside').attr('class');
-        if (!AsideClassName) {
-            console.error("[loc] 没有找到广告容器 aside 的 class 属性");
-            return false;
-        }
-        const AsideSelector = '.' + AsideClassName.split(' ').join('.')
-        $(AsideSelector).css('display','none');
+    // 页面和长目录滚动同步
+    function syncMenuScroll() {
+        const activeItem = $('#menu_loc_ol li.active')[0];
+        if (!activeItem) return;
 
-        // 获取文章容器 article 的父级元素
-        const $articleParent = $('article').parent();
-        // 隐藏 article 父级元素的所有同级节点
-        $articleParent.siblings().hide();
-    };
+        const menu = $('#side-menu-loc')[0];
+        const itemTop = activeItem.offsetTop;
+        const itemHeight = activeItem.offsetHeight;
+        const menuHeight = menu.clientHeight;
+
+        // 计算目标滚动位置
+        const targetScrollTop = itemTop - (menuHeight - itemHeight) / 2;
+
+        // 节流平滑滚动
+        if (!menu.scrollTimeout) {
+            menu.scrollTimeout = setTimeout(() => {
+                menu.scrollTo({
+                    top: targetScrollTop,
+                    behavior: 'smooth'
+                });
+                menu.scrollTimeout = null;
+            }, 150); // 调整节流时间 (单位: 毫秒)
+        }
+    }
 
     return {
         init: () => {
             if (!initStructure()) return;
             generateItems();
             bindClickEvents();
-            removeAds();
         }
     };
 })();
@@ -276,7 +339,7 @@ GM_addStyle(`
         }
     }
     /* 响应式处理 */
-    @media (max-width: 1600px) {
+    @media (max-width: 1400px) {
         #side-menu-loc {
             display: none;
         }
@@ -287,6 +350,10 @@ GM_addStyle(`
 (() => {
     'use strict';
     try {
+        if (!isTitleExist) {
+            console.info('[TOC] 文章标题不存在，跳过目录生成');
+            return;
+        }
         console.log("[loc] ⏳ 开始生成目录...");
         if (typeof TOCGenerator?.init === 'function') {
             TOCGenerator.init();
