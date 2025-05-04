@@ -74,17 +74,17 @@ const TOCGenerator = (() => {
         $article.prepend(`
             <div id="side-menu-loc"
                 style="
-                    position:fixed;                                     /* 固定定位 */
-                    top:100px;                                          /* 距离顶部的距离 */
-                    right:100px;                                        /* 距离右侧的距离 */
-                    width:${STYLE_CONFIG.menu.width};                   /* 宽度 */
-                    background:${STYLE_CONFIG.menu.background};         /* 背景颜色 */
-                    z-index:${STYLE_CONFIG.menu.zIndex};                /* 确保在其他元素之上 */
-                    border-radius:${STYLE_CONFIG.menu.borderRadius};    /* 圆角 */
-                    border-left: 1px solid #ccc;                        /* 左边框 */
-                    box-shadow:${STYLE_CONFIG.menu.boxShadow};          /* 阴影 */
-                    padding:15px 20px;                                  /* 内边距 */
-                    line-height: 1.3;                                   /* 行高 */
+                    position: fixed;                                     /* 固定定位 */
+                    top: 100px;                                          /* 距离顶部的距离 */
+                    right: calc(50% - 750px);                                      /* 距离右侧的距离 */
+                    width: ${STYLE_CONFIG.menu.width};                   /* 宽度 */
+                    background: ${STYLE_CONFIG.menu.background};         /* 背景颜色 */
+                    z-index: ${STYLE_CONFIG.menu.zIndex};                /* 确保在其他元素之上 */
+                    border-radius: ${STYLE_CONFIG.menu.borderRadius};    /* 圆角 */
+                    border-left: 1px solid #ccc;                         /* 左边框 */
+                    box-shadow: ${STYLE_CONFIG.menu.boxShadow};          /* 阴影 */
+                    padding:15px 20px;                                   /* 内边距 */
+                    line-height: 1.3;                                    /* 行高 */
                 ">
                 <h2
                     style="margin:0 0 8px;font-size:18px;">
@@ -92,10 +92,10 @@ const TOCGenerator = (() => {
                 </h2>
                 <hr
                 style="
-                    height:${STYLE_CONFIG.hr.height};                   /* 线条粗细 */
-                    background:${STYLE_CONFIG.hr.color};                /* 背景颜色 */
-                    margin:12px 0;                                      /* 上下边距 */
-                    border:none;                                        /* 移除默认边框 */
+                    height: ${STYLE_CONFIG.hr.height};                   /* 线条粗细 */
+                    background: ${STYLE_CONFIG.hr.color};                /* 背景颜色 */
+                    margin: 12px 0;                                      /* 上下边距 */
+                    border: none;                                        /* 移除默认边框 */
                 ">
                 <ol id="menu_loc_ol" style="list-style:none; margin:0; padding:0;"></ol>
             </div>
@@ -268,6 +268,12 @@ GM_addStyle(`
         #menu_loc_ol li:hover {
             background: #a4c99e;
             color: #000000;
+        }
+    }
+    /* 响应式处理 */
+    @media (max-width: 1600px) {
+        #side-menu-loc {
+            display: none;
         }
     }
 `);
