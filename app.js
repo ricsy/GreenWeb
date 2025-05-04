@@ -1,9 +1,9 @@
 // =============================== 脚本头部元信息 ===============================
 // ==UserScript==
-// @name         简书智能目录生成器
-// @namespace    https://github.com/ricsy/JianShuToc
+// @name         🌿📖 这才是简书
+// @namespace    ricsy
 // @version      1.0.0
-// @description  自动生成响应式目录，支持清除非正文内容，适配夜间模式
+// @description  自动生成响应式目录，支持清除广告、不相关内容，适配夜间模式
 // @author       ricsy
 // @match        http://www.jianshu.com/p/*
 // @match        https://www.jianshu.com/p/*
