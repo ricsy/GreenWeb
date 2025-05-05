@@ -19,6 +19,51 @@ window.addEventListener('error', (e) => {
     // console.log(`[GreenWeb] [全局异常] ${e.message} @${e.filename}:${e.lineno}`);
 });
 
+const customElement = (() => {
+    const CONFIG = {    
+        "toc" : {
+            '#side-menu-toc': {
+                name_zh: '目录主容器',
+                selector_type: 'id',
+                name_en: 'side-menu-toc',
+                type: 'custom'
+            },
+            '#menu_toc_ol': {
+                name_zh: '目录列表',
+                selector_type: 'id',
+                name_en:'menu_toc_ol',
+                type: 'custom'
+            },
+        },
+        "ad": {
+            '#ad-control': {    
+                name_zh: '广告控制栏',
+                selector_type: 'id',
+                name_en:'ad-control',
+                type: 'custom'
+            },  
+        }
+    };
+    return {
+        // 根据中文名称查询
+        getSelector: (sort, name_zh) => {
+            let result = {};
+            for (const [selector, config] of Object.entries(CONFIG[sort])) {
+                const zhName = typeof config === 'object'? config.name_zh : config;
+                if (zhName === name_zh) {
+                    return { 
+                        'selector': selector, 
+                        'selector_type': config?.selector_type || 'id', 
+                        'name_en': config?.name_en || '', 
+                    };
+                }
+            }
+            return result;
+        },
+    }
+}
+)();
+
 /* =============================== 元素标签 =============================== */
 const elementTag = (() => {
     const CONFIG = {
@@ -238,32 +283,6 @@ const webElement = (() => {
             },
         },
         'www.jianshu.com': {
-            '.aside': {
-                name_zh: '右侧广告栏',
-                selector_type: 'class',
-                name_en: 'aside',
-                type: 'official',
-                dynamic: true,
-                hide: true,
-            },
-            '#side-menu-toc': {
-                name_zh: '目录主容器',
-                selector_type: 'id',
-                name_en: 'side-menu-toc',
-                type: 'custom'
-            },
-            '#menu_toc_ol': {
-                name_zh: '目录列表',
-                selector_type: 'id',
-                name_en:'menu_toc_ol',
-                type: 'custom'
-            },
-            '#ad-control': {
-                name_zh: '广告控制栏',
-                selector_type: 'id',
-                name_en:'ad-control',
-                type: 'custom'
-            },
         },
         'www.baidu.com': {
             '#u': {
@@ -352,6 +371,7 @@ const webElement = (() => {
                 name_zh: typeof config === 'object' ? config.name_zh : config,
                 name_en: config?.name_en || selector,
                 selector: selector,
+                selector_type: config?.selector_type,
                 hide: config?.hide || false,
                 type: config?.type || 'official',
                 dynamic: config?.dynamic || false,
@@ -360,7 +380,7 @@ const webElement = (() => {
             })) : [];
         },
         // 根据中文名称查询，如果中文名称为空则返回所有选择器
-        getSelectorByChineseName: (name_zh) => {
+        getSelector: (name_zh) => {
             if (!name_zh) return this.getAllSelectors();
 
             const host = window.location.hostname;
@@ -505,15 +525,14 @@ const Utils = (() => {
 
         // 验证选择器类型是否有效
         validateSelectorType: (selector) => {
-            const validTypes = ['id', 'class', 'attribute'];
+            const validTypes = ['id', 'class'];
             const selectorRegex = {
                 'id': /^#([\w-]+|\[.+\])$/,
                 'class': /^\.([\w-]+|\[.+\])$/,
-                'attribute': /^\[.*?=['"].*?['"]\]$/
             };
             
+            console.log(selector.selector_type);
             if (!validTypes.includes(selector.selector_type)) {
-                console.error(`无效选择器类型: ${selector.selector_type}，应为 id/class/attribute`);
                 return false;
             }
             if (!selector.selector.match(selectorRegex[selector.selector_type])) {
@@ -570,11 +589,11 @@ const TOCGenerator = (() => {
     const {
         name_en: sideMenuLocName = 'side-menu-toc',
         selector: sideMenuLocSelector = '#side-menu-toc'
-    } = webElement.getSelectorByChineseName("目录主容器") || {};
+    } = customElement.getSelector("toc", "目录主容器") || {};
     const {
         name_en: menuLocOlName = 'menu_toc_ol',
         selector: menuLocOlSelector = '#menu_toc_ol'
-    } = webElement.getSelectorByChineseName("目录列表") || {};
+    } = customElement.getSelector("toc","目录列表") || {};
 
     // 标题起始索引
     let titleIndex = 1;
@@ -804,7 +823,7 @@ const AdManager = (() => {
 
     const {
         name_en: adControlName = 'ad-control',
-    } = webElement.getSelectorByChineseName("广告控制栏") || {};
+    } = customElement.getSelector("ad", "广告控制栏") || {};
 
     // UI组件库
     const ControlPanel = (() => {
@@ -874,7 +893,6 @@ const AdManager = (() => {
 
         return {
             init: () => {
-                if (window.location.hostname !== 'blog.csdn.net') return;
                 // 创建广告控制面板
                 window.panel = ControlPanel.create();
                 $('body').append(window.panel);
@@ -894,12 +912,16 @@ const updateAdCounter = (() => {
       init: () => {
         const counters = webElement.getAllSelectors();
         const total = counters.filter(c => {
-            const el = document.querySelector(c.selector);
-            return el && c.type === 'official';
+            if (Utils.validateSelectorType(c)) {
+                const el = document.querySelector(c.selector);
+                return el && c.type === 'official';
+            }
         }).length;
         const filtered = counters.filter(c => {
-          const el = document.querySelector(c.selector);
-          return el && (el.style.display === 'none' || el.offsetParent === null);
+            if (Utils.validateSelectorType(c)) {
+                const el = document.querySelector(c.selector);
+                return el && (el.style.display === 'none' || el.offsetParent === null);
+            }
         }).length;
   
         $('#filtered-count').text(filtered);
@@ -915,35 +937,38 @@ const createControlPanel = () => {
     const userSettings = JSON.parse(localStorage.getItem('adSettings') || '{}');
     const elements = webElement.getAllSelectors() ?? [];
 
-    // =============================== 【CSDN】创建控制面板 ===============================
+    // =============================== 创建控制面板 ===============================
     elements.forEach((element) => {
         const selector = element.selector;
-        const el = document.querySelector(selector);
-        if (!el) {
-            return;
+        console.log(selector, Utils.validateSelectorType(element));
+        if (Utils.validateSelectorType(element)) {
+            const el = document.querySelector(selector);
+            if (!el) {
+                return;
+            }
+            const name_zh = element.name_zh;
+            const hide = element.hide;
+            // 如果 localStorage 中没有设置，则使用默认值
+            const isEnabled = userSettings[selector] !== undefined ? userSettings[selector] : hide;
+            panel.find('#filters').append(`
+                <label style="
+                        display:flex; align-items:center; gap:8px; padding:5px; cursor:pointer;
+                    ">
+                    <input type="checkbox" ${isEnabled ? 'checked' : ''} data-selector="${selector}">
+                    <span style="font-size:13px;">${selector}『${name_zh}』</span>
+                </label>
+            `);
         }
-        const name_zh = element.name_zh;
-        const hide = element.hide;
-        // 如果 localStorage 中没有设置，则使用默认值
-        const isEnabled = userSettings[selector] !== undefined ? userSettings[selector] : hide;
-        panel.find('#filters').append(`
-            <label style="
-                    display:flex; align-items:center; gap:8px; padding:5px; cursor:pointer;
-                ">
-                <input type="checkbox" ${isEnabled ? 'checked' : ''} data-selector="${selector}">
-                <span style="font-size:13px;">${selector}『${name_zh}』</span>
-            </label>
-        `);
     });
 
-    // =============================== 【CSDN】面板切换功能 ===============================
+    // =============================== 面板切换功能 ===============================
     panel.find('#toggle-panel').click(() => {
         panel.toggleClass('collapsed');
         $('#filters').slideToggle();
         $('#toggle-panel').text(panel.hasClass('collapsed') ? '⬆️' : '⬇️');
     });
 
-    // =============================== 【CSDN】控制面板事件 ===============================
+    // =============================== 控制面板事件 ===============================
     // 保存设置到 localStorage
     panel.on('change', 'input[type="checkbox"]', function() {
         const selector = $(this).data('selector');
@@ -979,9 +1004,15 @@ const createControlPanel = () => {
 };
 
 const removeAds = () => {
-     // 移除简书广告
-     if (window.location.hostname === 'www.jianshu.com') {
+    // =============================== 批量移除 ===============================
+    const elements = webElement.getAllSelectors() ?? [];
+    elements.forEach(element => {
+        if (element.hide) {
+            $(element.selector).hide();
+        }
+    });
 
+    if (window.location.hostname === 'www.jianshu.com') {
         // =============================== 【简书】移除侧边栏标签 ===============================
         const {
             tag: asideTag = 'aside',
@@ -1005,15 +1036,6 @@ const removeAds = () => {
         // 隐藏文章标签父级元素的所有同级节点
         $articleParent.siblings().hide();
     } else if (window.location.hostname === 'blog.csdn.net') {
-
-        // =============================== 【CSDN】批量移除元素 ===============================
-        const elements = webElement.getAllSelectors() ?? [];
-        elements.forEach(element => {
-            if (element.hide) {
-                $(element.selector).hide();
-            }
-        });
-
         // =============================== 【CSDN】移除复制保护 ===============================
         $('.hljs-button.signin')
             .removeClass('signin') // 移除 signin 类
@@ -1053,14 +1075,6 @@ const removeAds = () => {
             });;
 
     } else if (window.location.hostname === 'zhuanlan.zhihu.com') {
-         // =============================== 【知乎】批量移除元素 ===============================
-         const elements = webElement.getAllSelectors() ?? [];
-         elements.forEach(element => {
-             if (element.hide) {
-                 $(element.selector).hide();
-             }
-         });
-
         // =============================== 【知乎】监控登录弹窗 ===============================
         Utils.setupDynamicHandler('.signFlowModal-container', () => {
             $('.Modal-closeButton').click();
@@ -1081,13 +1095,6 @@ const removeAds = () => {
           });
         
     } else if (window.location.hostname === 'www.baidu.com') {
-         // =============================== 【百度】批量移除元素 ===============================
-         const elements = webElement.getAllSelectors() ?? [];
-         elements.forEach(element => {
-             if (element.hide) {
-                 $(element.selector).hide();
-             }
-         });
     };
 };
 
@@ -1096,7 +1103,6 @@ const makeBeatiful = () => {
     elements.forEach(element => {
         if (element.change) {
             Object.entries(element.change_info).forEach(change => {
-                console.log(element.selector, change[0], change[1]);
                 $(element.selector).css(change[0], `${change[1]}!important`);
             })
         }
@@ -1203,12 +1209,10 @@ GM_addStyle(`
     /* =============================== 广告控制 =============================== */
     (() => {
         try {
-            if (window.location.hostname === 'blog.csdn.net') {
-                AdManager.init();
-                $('body').append(createControlPanel());
-                updateAdCounter.init();
-                console.log('[GreenWeb] [ADB] ✅ 广告控制面板初始化完成');
-            }
+            AdManager.init();
+            $('body').append(createControlPanel());
+            updateAdCounter.init();
+            console.log('[GreenWeb] [ADB] ✅ 广告控制面板初始化完成');
         } catch (e) {
             console.error('[GreenWeb] [ADB] 💥 广告控制模块异常 - ', e);
         }
