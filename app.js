@@ -528,10 +528,9 @@ const Utils = (() => {
             const validTypes = ['id', 'class'];
             const selectorRegex = {
                 'id': /^#([\w-]+|\[.+\])$/,
-                'class': /^\.([\w-]+|\[.+\])$/,
+                'class': /^\.([\w-]+)(\.[\w-]+)*$/,
             };
             
-            console.log(selector.selector_type);
             if (!validTypes.includes(selector.selector_type)) {
                 return false;
             }
@@ -940,7 +939,6 @@ const createControlPanel = () => {
     // =============================== 创建控制面板 ===============================
     elements.forEach((element) => {
         const selector = element.selector;
-        console.log(selector, Utils.validateSelectorType(element));
         if (Utils.validateSelectorType(element)) {
             const el = document.querySelector(selector);
             if (!el) {
@@ -974,7 +972,7 @@ const createControlPanel = () => {
         const selector = $(this).data('selector');
         userSettings[selector] = $(this).prop('checked');
         localStorage.setItem('adSettings', JSON.stringify(userSettings));
-        console.log(`[GreenWeb] [AdFilter] 已保存设置: ${selector} => ${userSettings[selector]}`);
+        console.log(`[GreenWeb] [ADB] 已保存设置: ${selector} => ${userSettings[selector]}`);
         $(selector).css('display', userSettings[selector] ? 'none' : 'block');
         updateAdCounter.init();
     });
@@ -989,7 +987,6 @@ const createControlPanel = () => {
     // 全选/全不选
     panel.find('#toggle-all').click(() => {
         const checkboxes = panel.find('input[type="checkbox"]');
-        console.log(checkboxes);
         const allChecked = checkboxes.toArray().every(cb => cb.checked);
         checkboxes.prop('checked', !allChecked).trigger('change');
         updateAdCounter.init();
@@ -1200,7 +1197,7 @@ GM_addStyle(`
     (() => {
         try {
             removeAds();
-    console.log('[GreenWeb] [ADB] ✅ 广告已净化');
+            console.log('[GreenWeb] [ADB] ✅ 广告已净化');
         } catch (e) {
             console.error('[GreenWeb] [ADB] 💥 广告净化模块异常 - ', e);
         }
@@ -1222,7 +1219,7 @@ GM_addStyle(`
     (() => {
         try {
             makeBeatiful();
-    console.log('[GreenWeb] [MBF] ✅ 页面已美化');
+            console.log('[GreenWeb] [MBF] ✅ 页面已美化');
         } catch (e) {
             console.error('[GreenWeb] [MBF] 💥 页面美化模块异常 - ', e);
         }
