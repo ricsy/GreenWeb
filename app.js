@@ -195,7 +195,7 @@ const elementTag = (() => {
         // 获取所有标签
         getAllTags: () => {
             let result = [];
-            const platform = Object.keys(CONFIG).find(k => host.includes(k));
+            const platform = Object.keys(CONFIG).find(k => hostname.includes(k));
             if (!platform) return result;
 
             for (const [tag, config] of Object.entries(CONFIG[platform])) {
@@ -214,7 +214,7 @@ const elementTag = (() => {
         // 根据中文名称查询
         getTagByChineseName: (name_zh) => {
             let result = '';
-            const platform = Object.keys(CONFIG).find(k => host.includes(k));
+            const platform = Object.keys(CONFIG).find(k => hostname.includes(k));
             if (!platform) return result;
 
             for (const [tag, config] of Object.entries(CONFIG[platform])) {
@@ -474,7 +474,7 @@ const webElement = (() => {
     return {
         // 返回所有选择器
         getAllSelectors: () => {
-            const platform = Object.keys(CONFIG).find(k => host.includes(k));
+            const platform = Object.keys(CONFIG).find(k => hostname.includes(k));
             return platform ? Object.entries(CONFIG[platform]).map(([selector, config]) => ({
                 name_zh: typeof config === 'object' ? config.name_zh : config,
                 name_en: config?.name_en || selector,
@@ -493,7 +493,7 @@ const webElement = (() => {
         getSelector: (name_zh) => {
             if (!name_zh) return this.getAllSelectors();
 
-            const platform = Object.keys(CONFIG).find(k => host.includes(k));
+            const platform = Object.keys(CONFIG).find(k => hostname.includes(k));
             if (!platform) return [];
 
             for (const [selector, config] of Object.entries(CONFIG[platform])) {
@@ -696,11 +696,10 @@ const Utils = (() => {
         },
         // 获取配置
         getAdConfig: () => {
-            userSettings = JSON.parse(localStorage.getItem('adSettings') || '{}');
-            return userSettings[hostname] || {};
+            return JSON.parse(localStorage.getItem('adSettings') || '{}');
         },
         dealElementVisible: (elementAlias, hidden, print) => {
-            const userSettings = getAdConfig();
+            const userSettings = Utils.getAdConfig();
             const elementType = elementAlias.startsWith('element_')? 'element' : 'tag';
             const elementName = elementAlias.replace('element_', '').replace('tag_', '');
 
@@ -984,13 +983,6 @@ const TOCGenerator = (() => {
 
 /* =============================== 广告管理模块 =============================== */
 const AdManager = (() => {
-    // 存储模块
-    const Storage = (() => {
-        return {
-            load: () => JSON.parse(localStorage.getItem('adSettings') || '{}'),
-            save: (settings) => localStorage.setItem('adSettings', JSON.stringify(settings))
-        };
-    })();
 
     const {
         name_en: adControlName = 'ad-control',
@@ -1116,8 +1108,7 @@ const updateAdCounter = (() => {
 const createControlPanel = () => {
     const panel = window.panel;
     // 从 localStorage 加载用户设置
-    const adSettings = JSON.parse(localStorage.getItem('adSettings') || '{}');
-    const userSettings = adSettings[hostname] || {};
+    const userSettings = JSON.parse(localStorage.getItem('adSettings') || '{}');
 
     // =============================== 创建控制面板 ===============================
     const addFilter = (type, element) => {
@@ -1184,8 +1175,7 @@ const createControlPanel = () => {
 
         // 更新用户设置
         userSettings[elementAlias] = isEnabled;
-        adSettings[hostname] = JSON.stringify(userSettings);
-        localStorage.setItem('adSettings', adSettings);
+        localStorage.setItem('adSettings', JSON.stringify(userSettings));
 
         // 应用设置
         Utils.dealElementVisible(elementAlias, isEnabled, true)
@@ -1242,7 +1232,7 @@ const removeAds = () => {
 
     // =============================== 批量隐藏（元素&标签） ===============================
     Logger.primary("开始隐藏元素>>>")
-    const userSettings = Utils.getUserSettings();
+    const userSettings = Utils.getAdConfig();
     const isEmpty = Object.keys(userSettings).length === 0;
     if (!isEmpty) {
         Logger.primary("加载用户广告过滤规则");
