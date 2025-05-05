@@ -1449,15 +1449,15 @@ GM_addStyle(`
 
     /* =============================== 广告控制 =============================== */
     (() => {
-        // try {
-        Logger.simple("=".repeat(150));
-        AdManager.init();
-        $('body').append(createControlPanel());
-        updateAdCounter.init();
-        Logger.info('[ADC] ✅ 控制面板已生成');
-        // } catch (e) {
-        //     Logger.error('[ADC] 💥 广告控制模块异常 - ', e);
-        // }
+         try {
+            Logger.simple("=".repeat(150));
+            AdManager.init();
+            $('body').append(createControlPanel());
+            updateAdCounter.init();
+            Logger.info('[ADC] ✅ 控制面板已生成');
+         } catch (e) {
+             Logger.error('[ADC] 💥 广告控制模块异常 - ', e);
+         }
     })();
 
     /* =============================== 样式美化 =============================== */
