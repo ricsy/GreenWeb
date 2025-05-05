@@ -354,6 +354,7 @@ const webElement = (() => {
                 name_en:'new-pmd.c-container',
                 type: 'official',
                 hide: false,
+                show_filter: false,
                 change: true,
                 change_info: {
                     "display": "block",
@@ -372,10 +373,11 @@ const webElement = (() => {
                 name_en: config?.name_en || selector,
                 selector: selector,
                 selector_type: config?.selector_type,
-                hide: config?.hide || false,
+                hide: config?.hide ?? false,
+                show_filter: config?.show_filter ?? true,
                 type: config?.type || 'official',
-                dynamic: config?.dynamic || false,
-                change: config?.change || false,
+                dynamic: config?.dynamic ?? false,
+                change: config?.change ?? false,
                 change_info: config?.change_info || {},
             })) : [];
         },
@@ -393,10 +395,11 @@ const webElement = (() => {
                     return [{
                         name_en: config?.name_en || selector,
                         selector: selector,
-                        hide: config?.hide || false,
+                        hide: config?.hide ?? false,
+                        show_filter: config?.show_filter ?? true,
                         type: config?.type || 'official',
-                        dynamic: config?.dynamic || false,
-                        change: config?.change || false,
+                        dynamic: config?.dynamic ?? false,
+                        change: config?.change ?? false,
                         change_info: config?.change_info || {},
                     }];
                 }
@@ -913,13 +916,13 @@ const updateAdCounter = (() => {
         const total = counters.filter(c => {
             if (Utils.validateSelectorType(c)) {
                 const el = document.querySelector(c.selector);
-                return el && c.type === 'official';
+                return el && c.type === 'official' && c.show_filter;
             }
         }).length;
         const filtered = counters.filter(c => {
             if (Utils.validateSelectorType(c)) {
                 const el = document.querySelector(c.selector);
-                return el && (el.style.display === 'none' || el.offsetParent === null);
+                return el && c.show_filter && (el.style.display === 'none' || el.offsetParent === null);
             }
         }).length;
   
@@ -939,7 +942,7 @@ const createControlPanel = () => {
     // =============================== 创建控制面板 ===============================
     elements.forEach((element) => {
         const selector = element.selector;
-        if (Utils.validateSelectorType(element)) {
+        if (Utils.validateSelectorType(element) && element.show_filter) {
             const el = document.querySelector(selector);
             if (!el) {
                 return;
