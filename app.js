@@ -862,7 +862,7 @@ const AdManager = (() => {
                         ">
                         <h3 style="margin: 0; font-size: 16px;">
                             🛡️ 广告过滤器&nbsp;
-                            <span id="ad-counter" style="float: right; font-size: 14px; color: #666;">
+                            <span id="ad-counter" style="color: #666;">
                                 (<span id="filtered-count">0</span>/<span id="total-count">0</span>)
                             </span>
                         </h3>
